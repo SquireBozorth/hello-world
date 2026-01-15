@@ -1,0 +1,13 @@
+# ParentSquare Positive Behaviors
+# Format: Student Name - behavior description
+#
+# Tips:
+# - Start the behavior with a verb (was, helped, showed, etc.)
+# - The message will read: "I wanted to let you know that [Name] [your text here]"
+# - Lines starting with # are ignored
+# - Blank lines are ignored
+
+# Example entries (replace with your actual students):
+Johnny Smith - was focused in class today
+Sarah Jones - helped a classmate with their math assignment
+Alex Kim - demonstrated excellent teamwork during group activities
