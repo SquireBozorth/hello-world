@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
-import { CheckSquare, Target, BarChart3, LogOut, Menu, X } from 'lucide-react';
+import { CheckSquare, Target, Flag, Clock, Calendar, BarChart3, LogOut, Menu, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { Auth } from './components/Auth';
 import { TaskList } from './components/TaskList';
 import { HabitTracker } from './components/HabitTracker';
+import { GoalTracker } from './components/GoalTracker';
+import { TimeBlockView } from './components/TimeBlockView';
+import { WeeklyReview } from './components/WeeklyReview';
+import { Analytics } from './components/Analytics';
 import type { User } from '@supabase/supabase-js';
 
-type View = 'tasks' | 'habits' | 'analytics';
+type View = 'tasks' | 'habits' | 'goals' | 'timeblocks' | 'review' | 'analytics';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -48,6 +52,9 @@ function App() {
   const navigation = [
     { id: 'tasks' as View, name: 'Tasks', icon: CheckSquare },
     { id: 'habits' as View, name: 'Habits', icon: Target },
+    { id: 'goals' as View, name: 'Goals', icon: Flag },
+    { id: 'timeblocks' as View, name: 'Time Blocks', icon: Clock },
+    { id: 'review' as View, name: 'Weekly Review', icon: Calendar },
     { id: 'analytics' as View, name: 'Analytics', icon: BarChart3 },
   ];
 
@@ -79,7 +86,7 @@ function App() {
             <p className="text-sm text-gray-500 mt-1">{user.email}</p>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
@@ -127,20 +134,13 @@ function App() {
         )}
 
         <main className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto p-4 lg:p-8">
+          <div className="max-w-5xl mx-auto p-4 lg:p-8">
             {currentView === 'tasks' && <TaskList />}
             {currentView === 'habits' && <HabitTracker />}
-            {currentView === 'analytics' && (
-              <div className="text-center py-12">
-                <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                  Analytics Coming Soon
-                </h2>
-                <p className="text-gray-500">
-                  Track your productivity trends and insights here
-                </p>
-              </div>
-            )}
+            {currentView === 'goals' && <GoalTracker />}
+            {currentView === 'timeblocks' && <TimeBlockView />}
+            {currentView === 'review' && <WeeklyReview />}
+            {currentView === 'analytics' && <Analytics />}
           </div>
         </main>
       </div>
