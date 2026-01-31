@@ -2,19 +2,15 @@
 """Broadway lottery auto-entry runner.
 
 Usage:
-    python -m lottery.runner          # Run once (enter all open lotteries now)
-    python -m lottery.runner --loop   # Run on a schedule (checks every 30 min)
+    python -m lottery.runner              # Open browser, fill forms, wait for CAPTCHA
+    python -m lottery.runner --headless   # Fill forms without waiting (for cron/email-only)
 """
 
 import argparse
 import logging
-import time
 from datetime import datetime
 
-import schedule
-
-from .config import SHOWS
-from .todaytix import run_all_entries
+from .broadway_direct import run_all_entries
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,15 +29,20 @@ def _send_lottery_email(results: dict):
 
     now = datetime.now().strftime("%B %d, %Y at %I:%M %p")
     rows = ""
-    for show, ok in results.items():
-        color = "#2e7d32" if ok else "#c62828"
-        status = "ENTERED" if ok else "FAILED"
+    for show, filled in results.items():
+        if filled:
+            color = "#2e7d32"
+            status = "FORM FILLED — solve CAPTCHA to complete"
+        else:
+            color = "#888"
+            status = "Lottery not open"
         rows += f'<tr><td style="padding:8px;border-bottom:1px solid #eee">{show}</td>'
-        rows += f'<td style="padding:8px;border-bottom:1px solid #eee;color:{color};font-weight:bold">{status}</td></tr>'
+        rows += f'<td style="padding:8px;border-bottom:1px solid #eee;color:{color}">{status}</td></tr>'
 
+    open_count = sum(1 for v in results.values() if v)
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-        <h2 style="color:#1a237e">🎭 Broadway Lottery Results</h2>
+        <h2 style="color:#1a237e">🎭 Broadway Lottery Check</h2>
         <p style="color:#555">{now}</p>
         <table style="width:100%;border-collapse:collapse">
             <tr style="background:#f5f5f5">
@@ -51,57 +52,43 @@ def _send_lottery_email(results: dict):
             {rows}
         </table>
         <p style="color:#888;font-size:12px;margin-top:20px">
-            Entered {sum(1 for v in results.values() if v)} of {len(results)} available lotteries.
-            Winners are typically notified by email/text a few hours before showtime.
+            {open_count} of {len(results)} shows had open lotteries.
+            Check Broadway Direct for entry windows (usually open around 12am-9am).
         </p>
     </div>
     """
-    plain = f"Broadway Lottery Results — {now}\n\n"
-    for show, ok in results.items():
-        plain += f"  {show}: {'ENTERED' if ok else 'FAILED'}\n"
+    plain = f"Broadway Lottery Check — {now}\n\n"
+    for show, filled in results.items():
+        status = "OPEN - form filled" if filled else "Not open"
+        plain += f"  {show}: {status}\n"
 
-    send_email(f"🎭 Lottery: Entered {sum(1 for v in results.values() if v)} shows — {datetime.now().strftime('%m/%d')}", html, plain)
-
-
-def run_once():
-    logger.info("Checking all configured shows for open lotteries...")
-    results = run_all_entries(SHOWS)
-    if results:
-        logger.info("Entry results:")
-        for show, ok in results.items():
-            status = "ENTERED" if ok else "FAILED"
-            logger.info("  %s: %s", show, status)
-        _send_lottery_email(results)
-    else:
-        logger.info("No open lotteries found at this time.")
+    send_email(
+        f"🎭 Lottery: {open_count} open — {datetime.now().strftime('%m/%d')}",
+        html,
+        plain,
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Broadway lottery auto-entry")
+    parser = argparse.ArgumentParser(description="Broadway Direct lottery auto-fill")
     parser.add_argument(
-        "--loop",
+        "--headless",
         action="store_true",
-        help="Run continuously on a schedule (every 30 minutes)",
-    )
-    parser.add_argument(
-        "--interval",
-        type=int,
-        default=30,
-        help="Check interval in minutes when using --loop (default: 30)",
+        help="Don't wait for CAPTCHA interaction (just check & email results)",
     )
     args = parser.parse_args()
 
-    if args.loop:
-        logger.info(
-            "Starting lottery scheduler — checking every %d minutes.", args.interval
-        )
-        run_once()  # immediate first run
-        schedule.every(args.interval).minutes.do(run_once)
-        while True:
-            schedule.run_pending()
-            time.sleep(60)
+    interactive = not args.headless
+    logger.info("Checking Broadway Direct lotteries...")
+    results = run_all_entries(interactive=interactive)
+
+    if results:
+        for show, filled in results.items():
+            status = "FILLED" if filled else "NOT OPEN"
+            logger.info("  %s: %s", show, status)
+        _send_lottery_email(results)
     else:
-        run_once()
+        logger.info("Could not check any lotteries (browser issue?).")
 
 
 if __name__ == "__main__":

@@ -13,23 +13,28 @@ USER_INFO = {
     "num_tickets": int(os.getenv("NUM_TICKETS", "2")),
 }
 
-# Shows and their lottery platforms/URLs
-# Format: { "show_name": { "platform": "todaytix"|"luckyseat"|"broadway_direct", "show_id": "..." } }
-SHOWS = {
-    "Hamilton": {"platform": "todaytix", "show_id": "2928"},
-    "Wicked": {"platform": "todaytix", "show_id": "2636"},
-    "The Lion King": {"platform": "todaytix", "show_id": "2291"},
-    "Aladdin": {"platform": "todaytix", "show_id": "2396"},
-    "Hadestown": {"platform": "todaytix", "show_id": "14873"},
-    "MJ The Musical": {"platform": "todaytix", "show_id": "22120"},
-    "The Great Gatsby": {"platform": "todaytix", "show_id": "29498"},
-    "Back to the Future": {"platform": "todaytix", "show_id": "25498"},
-    "Harry Potter and the Cursed Child": {"platform": "todaytix", "show_id": "6696"},
-    "Chicago": {"platform": "todaytix", "show_id": "2232"},
-    "SIX": {"platform": "todaytix", "show_id": "18498"},
-    "& Juliet": {"platform": "todaytix", "show_id": "24420"},
+# Broadway Direct lottery shows
+# URL pattern: https://lottery.broadwaydirect.com/show/{slug}/
+BROADWAY_DIRECT_SHOWS = {
+    "Aladdin": "aladdin",
+    "Death Becomes Her": "death-becomes-her",
+    "MJ The Musical": "mj-ny",
+    "SIX": "six-ny",
+    "Stranger Things": "st-nyc",
 }
 
-# TodayTix API base
-TODAYTIX_API_BASE = "https://api.todaytix.com/api/v2"
-TODAYTIX_LOTTERY_ENTRY_URL = TODAYTIX_API_BASE + "/customers/me/lotteries"
+BROADWAY_DIRECT_BASE = "https://lottery.broadwaydirect.com/show"
+
+# Broadway Direct form field DOM IDs
+BD_FIELDS = {
+    "first_name": "dlslot_name_first",
+    "last_name": "dlslot_name_last",
+    "num_tickets": "dlslot_ticket_qty",
+    "email": "dlslot_email",
+    "dob_month": "dlslot_dob_month",
+    "dob_day": "dlslot_dob_day",
+    "dob_year": "dlslot_dob_year",
+    "zip_code": "dlslot_zip",
+    "country": "dlslot_country",
+    "agree": "dlslot_agree",
+}
