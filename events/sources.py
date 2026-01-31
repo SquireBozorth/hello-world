@@ -16,7 +16,7 @@ Each scraper function returns a list of dicts with a consistent schema:
 
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 from bs4 import BeautifulSoup
@@ -124,53 +124,61 @@ def scrape_nyc_parks() -> list[dict]:
 
 
 def scrape_eventbrite_free() -> list[dict]:
-    """Scrape Eventbrite for free/cheap NYC events."""
+    """Scrape Eventbrite for free/cheap NYC events over the next 2 weeks."""
     events = []
-    try:
-        url = (
-            "https://www.eventbrite.com/d/ny--new-york/free--events/"
-            "?page=1&sort=date"
-        )
-        resp = requests.get(url, headers=HEADERS, timeout=15)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "lxml")
-
-        for card in soup.select(
-            "[data-testid='event-card'], .search-event-card-wrapper, .eds-event-card"
-        ):
-            title_el = card.select_one(
-                "h2, h3, [data-testid='event-card-title'], .eds-event-card__formatted-name--is-clamped"
+    start = datetime.now().strftime("%Y-%m-%d")
+    end = (datetime.now() + timedelta(days=14)).strftime("%Y-%m-%d")
+    for page in range(1, 4):  # first 3 pages
+        try:
+            url = (
+                f"https://www.eventbrite.com/d/ny--new-york/free--events/"
+                f"?page={page}&sort=date&start_date={start}&end_date={end}"
             )
-            if not title_el:
-                continue
-            title = title_el.get_text(strip=True)
+            resp = requests.get(url, headers=HEADERS, timeout=15)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "lxml")
 
-            link_el = card.select_one("a[href]")
-            link = link_el["href"] if link_el else ""
-
-            date_el = card.select_one(
-                "[data-testid='event-card-date'], .eds-event-card-content__sub-title"
+            cards = soup.select(
+                "[data-testid='event-card'], .search-event-card-wrapper, .eds-event-card"
             )
-            date_str = date_el.get_text(strip=True) if date_el else ""
+            if not cards:
+                break
 
-            price_el = card.select_one(
-                "[data-testid='event-card-price'], .eds-event-card-content__sub"
-            )
-            price_text = price_el.get_text(strip=True) if price_el else "Free"
+            for card in cards:
+                title_el = card.select_one(
+                    "h2, h3, [data-testid='event-card-title'], .eds-event-card__formatted-name--is-clamped"
+                )
+                if not title_el:
+                    continue
+                title = title_el.get_text(strip=True)
 
-            events.append({
-                "title": title,
-                "date": date_str,
-                "venue": "",
-                "price": price_text,
-                "price_value": _parse_price(price_text),
-                "category": _categorize(title),
-                "url": link,
-                "source": "Eventbrite",
-                "neighborhood": "",
-            })
-    except requests.RequestException as e:
-        logger.warning("Failed to scrape Eventbrite: %s", e)
+                link_el = card.select_one("a[href]")
+                link = link_el["href"] if link_el else ""
+
+                date_el = card.select_one(
+                    "[data-testid='event-card-date'], .eds-event-card-content__sub-title"
+                )
+                date_str = date_el.get_text(strip=True) if date_el else ""
+
+                price_el = card.select_one(
+                    "[data-testid='event-card-price'], .eds-event-card-content__sub"
+                )
+                price_text = price_el.get_text(strip=True) if price_el else "Free"
+
+                events.append({
+                    "title": title,
+                    "date": date_str,
+                    "venue": "",
+                    "price": price_text,
+                    "price_value": _parse_price(price_text),
+                    "category": _categorize(title),
+                    "url": link,
+                    "source": "Eventbrite",
+                    "neighborhood": "",
+                })
+        except requests.RequestException as e:
+            logger.warning("Failed to scrape Eventbrite (page %d): %s", page, e)
+            break
     return events
 
 

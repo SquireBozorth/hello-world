@@ -5,13 +5,14 @@ Usage:
     python -m events.runner                     # Show all events under $25
     python -m events.runner --max-price 10      # Only events under $10
     python -m events.runner --categories music comedy
+    python -m events.runner --email             # Email the digest to yourself
     python -m events.runner --save              # Save to output/events.txt
 """
 
 import argparse
 import logging
 
-from .aggregator import gather_events, format_terminal, save_to_file
+from .aggregator import gather_events, format_terminal, save_to_file, send_events_email
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +37,11 @@ def main():
         help="Filter by event categories",
     )
     parser.add_argument(
+        "--email",
+        action="store_true",
+        help="Email the events digest to yourself (requires GMAIL_APP_PASSWORD in .env)",
+    )
+    parser.add_argument(
         "--save",
         action="store_true",
         help="Save results to output/events.txt",
@@ -44,6 +50,12 @@ def main():
 
     events = gather_events(max_price=args.max_price, categories=args.categories)
     print(format_terminal(events))
+
+    if args.email:
+        if send_events_email(events):
+            logger.info("Events digest emailed successfully.")
+        else:
+            logger.error("Failed to email digest. Check GMAIL_APP_PASSWORD in .env")
 
     if args.save:
         save_to_file(events)

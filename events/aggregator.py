@@ -86,6 +86,83 @@ def format_terminal(events: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def format_html(events: list[dict]) -> str:
+    """Format events as a nice HTML email."""
+    if not events:
+        return "<p>No events found matching your criteria.</p>"
+
+    today = datetime.now().strftime("%A, %B %d, %Y")
+    by_cat: dict[str, list[dict]] = {}
+    for e in events:
+        by_cat.setdefault(e["category"], []).append(e)
+
+    category_labels = {
+        "music": "Live Music",
+        "comedy": "Comedy",
+        "theater": "Theater & Plays",
+        "art": "Art & Exhibits",
+        "activity": "Activities & Other",
+        "other": "Other",
+    }
+    category_emoji = {
+        "music": "🎵",
+        "comedy": "😂",
+        "theater": "🎭",
+        "art": "🎨",
+        "activity": "🎯",
+        "other": "📌",
+    }
+
+    sections = ""
+    for cat, cat_events in sorted(by_cat.items()):
+        label = category_labels.get(cat, cat.title())
+        emoji = category_emoji.get(cat, "📌")
+        cards = ""
+        for e in cat_events:
+            details = []
+            if e["date"]:
+                details.append(e["date"])
+            if e["venue"]:
+                details.append(e["venue"])
+            details.append(e["price"])
+            detail_str = " &middot; ".join(details)
+            link = f'<a href="{e["url"]}" style="color:#1565c0;text-decoration:none">Details →</a>' if e["url"] else ""
+            cards += f"""
+            <div style="padding:12px 0;border-bottom:1px solid #eee">
+                <div style="font-weight:bold;font-size:15px">{e['title']}</div>
+                <div style="color:#666;font-size:13px;margin-top:4px">{detail_str}</div>
+                <div style="margin-top:4px;font-size:12px">{link} <span style="color:#aaa">via {e['source']}</span></div>
+            </div>"""
+        sections += f"""
+        <div style="margin-bottom:24px">
+            <h3 style="color:#1a237e;border-bottom:2px solid #e8eaf6;padding-bottom:6px">{emoji} {label} ({len(cat_events)})</h3>
+            {cards}
+        </div>"""
+
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:650px;margin:0 auto;padding:20px">
+        <h2 style="color:#1a237e">NYC Events — Next 2 Weeks</h2>
+        <p style="color:#555">{today} &middot; {len(events)} events under your price cap</p>
+        {sections}
+        <p style="color:#aaa;font-size:11px;margin-top:30px">Generated automatically. Sources: The Skint, NYC Parks, Eventbrite, Oh My Rockness</p>
+    </div>
+    """
+
+
+def send_events_email(events: list[dict]) -> bool:
+    """Email the events digest to yourself."""
+    try:
+        from shared_email import send_email
+    except ImportError:
+        logger.warning("shared_email module not found; can't send email.")
+        return False
+
+    html = format_html(events)
+    plain = format_terminal(events)
+    subject = f"NYC Events Digest — {len(events)} events — {datetime.now().strftime('%m/%d')}"
+    return send_email(subject, html, plain)
+
+
 def save_to_file(events: list[dict], path: str = "output/events.txt"):
     """Save formatted events to a text file."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
